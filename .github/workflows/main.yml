@@ -20,7 +20,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install --include=optional
         working-directory: backend
 
       - name: Generate Prisma Client
@@ -52,7 +52,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.x'
           channel: 'stable'
           cache: true
 
@@ -85,7 +84,7 @@ jobs:
           cache-dependency-path: admin-dashboard/package-lock.json
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --include=optional
         working-directory: admin-dashboard
 
       - name: Build Dashboard
