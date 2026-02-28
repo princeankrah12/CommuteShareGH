@@ -1,0 +1,17 @@
+{
+  "name": "commuteshare-gh",
+  "private": true,
+  "description": "Ghana’s most trusted carpooling network for professionals",
+  "workspaces": [
+    "backend",
+    "admin-dashboard",
+    "shared"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w backend",
+    "dev:admin": "npm run dev -w admin-dashboard",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
+  }
+}

@@ -1,0 +1,344 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  RIDER
+  DRIVER
+  BOTH
+  ADMIN
+}
+
+enum RideStatus {
+  SCHEDULED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ABORTED // SOS breakdown or emergency
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum TransactionType {
+  TOP_UP        // via MoMo
+  TRIP_PAYMENT  // Rider to Driver
+  CASHOUT       // Driver to MoMo
+  PROMO
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VehicleStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum IncidentType {
+  SOS
+  AC_MANDATE
+  SPEEDING
+  BEHAVIOR
+  VEHICLE_NEATNESS
+}
+
+enum IncidentStatus {
+  ACTIVE
+  INVESTIGATING
+  RESOLVED
+}
+
+enum PodRole {
+  ADMIN
+  MEMBER
+  GUEST // Temporary replacement for members on leave
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum CommutePreference {
+  CARPOOL
+  ROTATION
+}
+
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  googleId         String?           @unique
+  fullName         String
+  phoneNumber      String            @unique
+  ghanaCardId      String?           @unique
+  isVerified       Boolean           @default(false)
+  workEmail        String?
+  role             Role              @default(RIDER)
+  wallet           Wallet?
+  commutePoints    Int               @default(0)
+  trustScore       Float             @default(5.0) // Initial trust score
+  referralCode     String            @unique @default(cuid())
+  referredById     String?
+  fcmToken         String?           // Adds support for Firebase Push Notifications
+  referredBy       User?             @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals        User[]            @relation("UserReferrals")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  verification     VerificationRequest?
+  vehicles         Vehicle[]
+  ridesDriven      Ride[]            @relation("DriverRides")
+  bookings         RideBooking[]
+  affinityGroups   AffinityGroup[]   @relation("UserAffinity")
+  ratingsGiven     Rating[]          @relation("Rater")
+  ratingsReceived  Rating[]          @relation("Ratee")
+  reportedIncidents SafetyIncident[] @relation("Reporter")
+  subjectIncidents  SafetyIncident[] @relation("Subject")
+  podMemberships    PodMember[]
+  drivingSchedules  PodSchedule[]
+  commuteProfile    CommuteProfile?
+}
+
+model VerificationRequest {
+  id              String             @id @default(uuid())
+  userId          String             @unique
+  user            User               @relation(fields: [userId], references: [id])
+  type            String             // "GHANA_CARD", "CORPORATE_EMAIL"
+  idNumber        String?
+  documentUrl     String?            // URL to Ghana Card image
+  selfieUrl       String?            // URL to verification selfie
+  status          VerificationStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model SafetyIncident {
+  id              String         @id @default(uuid())
+  type            IncidentType
+  status          IncidentStatus @default(ACTIVE)
+  description     String
+  reportedById    String
+  reportedBy      User           @relation("Reporter", fields: [reportedById], references: [id])
+  subjectUserId   String?
+  subjectUser     User?          @relation("Subject", fields: [subjectUserId], references: [id])
+  rideId          String?
+  ride            Ride?          @relation(fields: [rideId], references: [id])
+  location        String?        // For SOS: coordinates or description
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  rideId    String
+  raterId   String
+  rater     User     @relation("Rater", fields: [raterId], references: [id])
+  rateeId   String
+  ratee     User     @relation("Ratee", fields: [rateeId], references: [id])
+  score     Int      @default(5) // 1 to 5
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model Vehicle {
+  id           String        @id @default(uuid())
+  make         String
+  model        String
+  year         Int
+  color        String
+  licensePlate String        @unique // Unique constraint—vital for safety
+  seatCapacity Int           // Number of empty seats offered
+  hasAC        Boolean       @default(true) // Crucial for premium service standards
+  status       VehicleStatus @default(PENDING)
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  rides        Ride[]
+}
+
+model Landmark {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  latitude  Float
+  longitude Float
+  location  Unsupported("geography(Point, 4326)")?
+  
+  stops            RideStop[]
+  pickupBookings   RideBooking[] @relation("PickupLandmark")
+  dropoffBookings  RideBooking[] @relation("DropoffLandmark")
+}
+
+model Ride {
+  id                   String        @id @default(uuid())
+  driverId             String
+  driver               User          @relation("DriverRides", fields: [driverId], references: [id])
+  vehicleId            String
+  vehicle              Vehicle       @relation(fields: [vehicleId], references: [id])
+  departureTime        DateTime
+  availableSeats       Int
+  fare                 Decimal       @db.Decimal(10, 2)
+  status               RideStatus    @default(SCHEDULED)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  
+  stops                RideStop[]
+  bookings             RideBooking[]
+  incidents            SafetyIncident[]
+}
+
+model RideStop {
+  id          String   @id @default(uuid())
+  rideId      String
+  ride        Ride     @relation(fields: [rideId], references: [id])
+  landmarkId  String
+  landmark    Landmark @relation(fields: [landmarkId], references: [id])
+  stopOrder   Int      // 0 for origin, 1, 2, 3...
+  
+  @@unique([rideId, landmarkId])
+  @@unique([rideId, stopOrder])
+}
+
+model RideBooking {
+  id                String        @id @default(uuid())
+  rideId            String
+  ride              Ride          @relation(fields: [rideId], references: [id])
+  riderId           String
+  rider             User          @relation(fields: [riderId], references: [id])
+  pickupLandmarkId  String
+  pickupLandmark    Landmark      @relation("PickupLandmark", fields: [pickupLandmarkId], references: [id])
+  dropoffLandmarkId String
+  dropoffLandmark   Landmark      @relation("DropoffLandmark", fields: [dropoffLandmarkId], references: [id])
+  status            BookingStatus @default(PENDING)
+  isRated           Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model AffinityGroup {
+  id    String @id @default(uuid())
+  name  String @unique
+  type  String // e.g., "CORPORATE", "COMMUNITY"
+  users User[] @relation("UserAffinity")
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  balance   Decimal  @default(0.0) @db.Decimal(10, 2)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  
+  sentTransactions     Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id               String            @id @default(uuid())
+  amount           Decimal           @db.Decimal(10, 2)
+  reference        String            @unique // Crucial for Paystack/MoMo webhook idempotency
+  type             TransactionType
+  status           TransactionStatus @default(PENDING)
+  
+  senderWalletId   String?
+  senderWallet     Wallet?           @relation("SentTransactions", fields: [senderWalletId], references: [id])
+  
+  receiverWalletId String?
+  receiverWallet   Wallet?           @relation("ReceivedTransactions", fields: [receiverWalletId], references: [id])
+  
+  tripId           String?           // Link the payment to a specific ride
+  
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model CarpoolPod {
+  id               String   @id @default(uuid())
+  name             String   // e.g., 'East Legon Executives'
+  inviteCode       String   @unique // 6-character unique code for sharing
+  origin           String   // e.g., 'East Legon'
+  destination      String   // e.g., 'Airport City'
+  matchKey         String   // H3 match key for the pod's route
+  needsReplacement Boolean  @default(false) // True if pod has an empty seat
+  
+  members          PodMember[]
+  schedules        PodSchedule[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([matchKey])
+}
+
+model PodMember {
+  id      String  @id @default(uuid())
+  podId   String
+  pod     CarpoolPod @relation(fields: [podId], references: [id])
+  userId  String
+  user    User    @relation(fields: [userId], references: [id])
+  role    PodRole @default(MEMBER)
+  expiresAt DateTime? // For guest riders replacing members on leave
+  
+  @@unique([podId, userId]) // User can only join a pod once
+}
+
+model PodSchedule {
+  id            String    @id @default(uuid())
+  podId         String
+  pod           CarpoolPod @relation(fields: [podId], references: [id])
+  day           DayOfWeek
+  driverId      String
+  driver        User      @relation(fields: [driverId], references: [id])
+  departureTime String    // e.g., '06:30'
+  
+  @@unique([podId, day]) // One assigned driver per day per pod
+}
+
+model CommuteProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id])
+  homeGeohash      String            // e.g., 'EAST_LEGON_GRID_4'
+  workGeohash      String            // e.g., 'AIRPORT_CITY_GRID_2'
+  departureTime    String            // e.g., '06:30'
+  matchKey         String            // Indexed string combining above fields
+  preference       CommutePreference @default(CARPOOL)
+  openToSuggestions Boolean           @default(true)
+  isOnLeave        Boolean           @default(false)
+  leaveStartDate   DateTime?
+  leaveEndDate     DateTime?
+  strikes          Int               @default(0)
+  
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([matchKey, preference])
+}
