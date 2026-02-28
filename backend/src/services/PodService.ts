@@ -1,6 +1,7 @@
 import { DayOfWeek, CommutePreference } from '@prisma/client';
 import prisma from './prisma';
 
+export class PodService {
   /**
    * Fetches the pod details for a specific user, including members and schedule.
    * 
