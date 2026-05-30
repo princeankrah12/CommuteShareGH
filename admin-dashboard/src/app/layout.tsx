@@ -4,8 +4,8 @@ import Sidebar from '@/components/Sidebar';
 import QueryProvider from '@/providers/QueryProvider';
 
 export const metadata: Metadata = {
-  title: 'CommuteShare Admin',
-  description: 'Admin Dashboard for CommuteShare GH',
+  title: 'MyCommuteShare Admin',
+  description: 'Admin Dashboard for MyCommuteShare',
 };
 
 export default function RootLayout({

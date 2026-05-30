@@ -82,28 +82,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   // Button
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_currentPage == _pages.length - 1) {
-                        _onFinish();
-                      } else {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.ease,
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: AppTheme.primaryNavy,
-                      minimumSize: const Size(0, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_currentPage == _pages.length - 1) {
+                          _onFinish();
+                        } else {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.ease,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        backgroundColor: AppTheme.primaryNavy,
+                        minimumSize: const Size(0, 50),
+                        maximumSize: const Size(200, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      child: Text(
+                        _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],

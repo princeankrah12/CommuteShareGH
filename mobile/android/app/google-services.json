@@ -1,0 +1,126 @@
+{
+  "project_info": {
+    "project_number": "870831073211",
+    "project_id": "my-commute-app-000",
+    "storage_bucket": "my-commute-app-000.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:870831073211:android:2ee30547d5005b8e55069e",
+        "android_client_info": {
+          "package_name": "com.commuteshare.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "870831073211-sd5v21eahbq2l5orvmd60hk3j1iu0hee.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.commuteshare.mobile",
+            "certificate_hash": "a7762fa8fdb065c572aaf8af75dd9bb056c58ef5"
+          }
+        },
+        {
+          "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMioVnX6PIfalAqoQbCz1IAsEz19dv9iE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "870831073211-hkibldq1e4434n43t3ekfj70s43hrdim.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.my-commute.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:870831073211:android:1626d1ebd3151be355069e",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMioVnX6PIfalAqoQbCz1IAsEz19dv9iE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "870831073211-hkibldq1e4434n43t3ekfj70s43hrdim.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.my-commute.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:870831073211:android:bc22d1dd0721205055069e",
+        "android_client_info": {
+          "package_name": "com.my_commute.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMioVnX6PIfalAqoQbCz1IAsEz19dv9iE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "870831073211-3kofld4rjaso3krnvphkrvavg0109753.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "870831073211-hkibldq1e4434n43t3ekfj70s43hrdim.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.my-commute.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

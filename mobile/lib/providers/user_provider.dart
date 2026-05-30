@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_models.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
@@ -9,12 +11,48 @@ class UserProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _hasSeenOnboarding = false;
   final DatabaseService _db = DatabaseService();
+  List<Landmark> _recentLandmarks = [];
 
   User? get user => _user;
   String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _user != null;
   bool get hasSeenOnboarding => _hasSeenOnboarding;
+  List<Landmark> get recentLandmarks => _recentLandmarks;
+
+  UserProvider() {
+    _loadRecentLandmarks();
+  }
+
+  Future<void> _loadRecentLandmarks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? recentJson = prefs.getString('recent_landmarks');
+    if (recentJson != null) {
+      final List<dynamic> decoded = jsonDecode(recentJson);
+      _recentLandmarks = decoded.map((item) => Landmark.fromJson(item)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> addRecentLandmark(Landmark landmark) async {
+    // Remove if already exists to move to top
+    _recentLandmarks.removeWhere((l) => l.id == landmark.id);
+    _recentLandmarks.insert(0, landmark);
+    
+    // Keep only last 5
+    if (_recentLandmarks.length > 5) {
+      _recentLandmarks = _recentLandmarks.sublist(0, 5);
+    }
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('recent_landmarks', jsonEncode(_recentLandmarks.map((l) => {
+      'id': l.id,
+      'name': l.name,
+      'latitude': l.latitude,
+      'longitude': l.longitude,
+    }).toList()));
+    notifyListeners();
+  }
 
   void completeOnboarding() {
     _hasSeenOnboarding = true;
@@ -40,27 +78,7 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loginMock() async {
-    _isLoading = true;
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 1));
-    _user = User(
-      id: 'u1',
-      email: 'kojo@example.com',
-      fullName: 'Kojo Mensah',
-      phoneNumber: '0244123456',
-      isVerified: true,
-      role: Role.rider,
-      walletBalance: 125.50,
-      commutePoints: 3,
-      trustScore: 4.8,
-      referralCode: 'GH67XY',
-      affinityGroups: ['MTN Ghana', 'Legon Alumni'],
-    );
-    _token = 'mock-jwt-token';
-    _isLoading = false;
-    notifyListeners();
-  }
+
 
   void logout() {
     _user = null;
@@ -122,6 +140,7 @@ class UserProvider with ChangeNotifier {
     required String plateNumber,
     required String color,
     required bool hasAC,
+    required int seatCapacity,
   }) async {
     if (_user == null) return;
     try {
@@ -131,6 +150,7 @@ class UserProvider with ChangeNotifier {
         plateNumber: plateNumber,
         color: color,
         hasAC: hasAC,
+        seatCapacity: seatCapacity,
       );
       await fetchProfile(_user!.id);
     } catch (e) {
@@ -139,14 +159,33 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<void> verifyWorkEmail(String email) async {
+  Future<void> requestWorkVerification(String email) async {
     if (_user == null) return;
     try {
-      await ApiService.verifyWorkEmail(email);
+      await ApiService.requestWorkVerification(email);
+    } catch (e) {
+      debugPrint(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> verifyWorkEmail(String email, String otp) async {
+    if (_user == null) return;
+    try {
+      await ApiService.verifyWorkEmail(email, otp);
       await fetchProfile(_user!.id);
     } catch (e) {
       debugPrint(e.toString());
       rethrow;
+    }
+  }
+
+  Future<List<Landmark>> searchLandmarks(String query) async {
+    try {
+      return await ApiService.searchLandmarks(query);
+    } catch (e) {
+      debugPrint('Error searching landmarks: $e');
+      return [];
     }
   }
 }

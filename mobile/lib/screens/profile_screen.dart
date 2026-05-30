@@ -4,13 +4,15 @@ import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
 import './verification_screen.dart';
 import './affinity_verification_screen.dart';
+import './login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().user;
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.user;
 
     return Scaffold(
       appBar: AppBar(
@@ -74,6 +76,23 @@ class ProfileScreen extends StatelessWidget {
                       minimumSize: const Size(double.infinity, 50),
                     ),
                     child: const Text('Verify Work/School Email'),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () {
+                      userProvider.logout();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    },
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    label: const Text(
+                      'Logout',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),

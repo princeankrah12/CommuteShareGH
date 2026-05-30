@@ -68,6 +68,7 @@ class Vehicle {
   final String plateNumber;
   final String color;
   final bool hasAC;
+  final int seatCapacity;
   final List<String> photos;
 
   Vehicle({
@@ -77,6 +78,7 @@ class Vehicle {
     required this.plateNumber,
     required this.color,
     required this.hasAC,
+    required this.seatCapacity,
     required this.photos,
   });
 
@@ -88,6 +90,7 @@ class Vehicle {
       plateNumber: json['plateNumber']?.toString() ?? '',
       color: json['color']?.toString() ?? '',
       hasAC: json['hasAC'] == true,
+      seatCapacity: int.tryParse(json['seatCapacity']?.toString() ?? '4') ?? 4,
       photos: json['photos'] != null ? List<String>.from(json['photos']) : [],
     );
   }

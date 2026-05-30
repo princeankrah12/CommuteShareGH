@@ -5,8 +5,35 @@ import '../theme/app_theme.dart';
 import './top_up_dialog.dart';
 import '../screens/wallet_history_screen.dart';
 
-class WalletCard extends StatelessWidget {
+class WalletCard extends StatefulWidget {
   const WalletCard({super.key});
+
+  @override
+  State<WalletCard> createState() => _WalletCardState();
+}
+
+class _WalletCardState extends State<WalletCard> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final userProvider = context.read<UserProvider>();
+      if (userProvider.user != null) {
+        userProvider.fetchProfile(userProvider.user!.id);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,23 +58,27 @@ class WalletCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Wallet Balance',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                  Text(
-                    'GHS ${user?.walletBalance.toStringAsFixed(2) ?? "0.00"}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Wallet Balance',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
-                  ),
-                ],
+                    Text(
+                      'GHS ${user?.walletBalance.toStringAsFixed(2) ?? "0.00"}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -55,6 +86,7 @@ class WalletCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.star, size: 16, color: AppTheme.primaryNavy),
                     const SizedBox(width: 4),

@@ -67,13 +67,23 @@ export class WalletService {
     if (verification.status && verification.data.status === 'success') {
       return await prisma.$transaction(async (tx) => {
         // Update wallet balance
-        await tx.wallet.update({
+        const updatedWallet = await tx.wallet.update({
           where: { id: transaction.receiverWalletId! },
           data: {
             balance: {
               increment: transaction.amount,
             },
           },
+        });
+
+        // Update User CommutePoints
+        await tx.user.update({
+          where: { id: updatedWallet.userId },
+          data: {
+            commutePoints: {
+              increment: Number(transaction.amount)
+            }
+          }
         });
 
         // Update transaction

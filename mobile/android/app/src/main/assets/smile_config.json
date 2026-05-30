@@ -1,0 +1,8 @@
+{
+  "partner_id": "YOUR_PARTNER_ID",
+  "api_key": "YOUR_API_KEY",
+  "sid_server": "0",
+  "auth_token": "YOUR_AUTH_TOKEN",
+  "prod_lambda_url": "https://example.com",
+  "test_lambda_url": "https://example.com"
+}

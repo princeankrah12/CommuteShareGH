@@ -1,9 +1,17 @@
+import 'dotenv/config';
 import { beforeAll, beforeEach, afterAll } from 'vitest';
 import prisma from '../services/prisma';
 
 beforeAll(async () => {
-  // Ensure we are connected
-  await prisma.$connect();
+  // Ensure we are connected and PostGIS is enabled
+  console.log('--- TEST SETUP START ---');
+  console.log('ENV DATABASE_URL:', process.env.DATABASE_URL ? 'PRESENT' : 'MISSING');
+  try {
+    await prisma.$connect();
+    await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS postgis;');
+  } catch (e) {
+    console.error('Failed to initialize database for tests:', e);
+  }
 });
 
 beforeEach(async () => {

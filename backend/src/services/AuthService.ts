@@ -12,10 +12,66 @@ const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true';
 
 export class AuthService {
   /**
+   * Development-only login that bypasses Google OAuth.
+   * Only active when USE_MOCK_DATA=true.
+   */
+  static async devLogin(email: string) {
+    if (!USE_MOCK_DATA) {
+      throw new Error('Dev Login is only available in development mode.');
+    }
+
+    logger.warn(`[AuthService] DEV LOGIN TRIGGERED for: ${email}`);
+    
+    // Find user by email or create a default one
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          fullName: email.split('@')[0].toUpperCase(),
+          phoneNumber: '0244' + Math.floor(100000 + Math.random() * 900000),
+          referralCode: 'DEV' + Math.random().toString(36).substring(2, 5).toUpperCase(),
+        }
+      });
+    }
+
+    const token = this.generateToken(user);
+    return { user, token };
+  }
+
+  /**
    * Verify Google ID Token and login/register user
    */
   static async googleLogin(idToken: string) {
     try {
+      if (USE_MOCK_DATA) {
+        logger.info('Using MOCK DATA for Google Login (Bypassing Verification)');
+        const MOCK_UUID = '11111111-1111-1111-1111-111111111111';
+        let mockUser = await prisma.user.findUnique({ where: { email: 'kojo@example.com' } });
+        if (!mockUser) {
+          mockUser = await prisma.user.create({
+            data: {
+              id: MOCK_UUID,
+              email: 'kojo@example.com',
+              fullName: 'Kojo Mensah',
+              googleId: 'google-12345',
+              phoneNumber: '0244000000',
+              isVerified: false,
+              role: 'RIDER',
+              commutePoints: 50,
+              trustScore: 5.0,
+              referralCode: 'MOCK123',
+              wallet: {
+                create: { balance: 0.0 }
+              }
+            }
+          });
+        }
+        const token = this.generateToken(mockUser);
+        return { user: mockUser, token };
+      }
+
       const ticket = await client.verifyIdToken({
         idToken: idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -216,23 +272,21 @@ export class AuthService {
       });
 
       // 2. Record verification (Audit trail)
-      // Note: We use a separate ID for email verifications if multiple types allowed, 
-      // but schema has userId as unique for VerificationRequest. 
-      // In a real app, we'd have a many-to-one relationship.
-      // For now, let's just log it if we can't create a second one.
-      try {
-        await tx.verificationRequest.create({
-          data: {
-            userId,
-            type: 'CORPORATE_EMAIL',
-            idNumber: workEmail,
-            status: 'APPROVED',
-          }
-        });
-      } catch (e) {
-        // Fallback: Just update existing one if it's the same user
-        logger.info(`Updating verification record for user ${userId} to include corporate email.`);
-      }
+      // Upsert prevents unique constraint errors from terminating the Postgres transaction
+      await tx.verificationRequest.upsert({
+        where: { userId },
+        update: {
+          type: 'CORPORATE_EMAIL',
+          idNumber: workEmail,
+          status: 'APPROVED',
+        },
+        create: {
+          userId,
+          type: 'CORPORATE_EMAIL',
+          idNumber: workEmail,
+          status: 'APPROVED',
+        }
+      });
 
       // 3. Update user and link to group
       return await tx.user.update({
@@ -255,10 +309,28 @@ export class AuthService {
 
   static async getUserProfile(userId: string) {
     try {
-      return await prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { id: userId },
         include: { vehicles: true, affinityGroups: true }
       });
+      
+      if (user) return user;
+
+      if (USE_MOCK_DATA) {
+        return {
+          id: userId,
+          email: 'kojo@example.com',
+          fullName: 'Kojo Mensah',
+          phoneNumber: '0244123456',
+          isVerified: false,
+          walletBalance: 125.50,
+          commutePoints: 3,
+          trustScore: 4.8,
+          referralCode: 'GH67XY',
+          affinityGroups: [{ name: 'MTN Ghana' }, { name: 'Legon Alumni' }],
+        };
+      }
+      return null;
     } catch (e) {
       console.error('getUserProfile DB fail, returning mock:', e);
       return {
@@ -266,7 +338,7 @@ export class AuthService {
         email: 'kojo@example.com',
         fullName: 'Kojo Mensah',
         phoneNumber: '0244123456',
-        isVerified: true,
+        isVerified: false,
         walletBalance: 125.50,
         commutePoints: 3,
         trustScore: 4.8,

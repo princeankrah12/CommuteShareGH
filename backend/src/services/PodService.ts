@@ -51,11 +51,13 @@ export class PodService {
    * @param podId - The ID of the carpool pod
    * @param userIds - Array of user IDs who are members of the pod
    * @param departureTime - Standard departure time (HH:mm format)
+   * @param tx - Optional Prisma transaction client
    */
   static async generateInitialSchedule(
     podId: string,
     userIds: string[],
-    departureTime: string = '06:30'
+    departureTime: string = '06:30',
+    tx?: any
   ): Promise<void> {
     const WORKDAYS: DayOfWeek[] = [
       'MONDAY',
@@ -76,28 +78,34 @@ export class PodService {
       [shuffledUsers[i], shuffledUsers[j]] = [shuffledUsers[j], shuffledUsers[i]];
     }
 
-    try {
-      // Map over workdays and assign drivers using modulo operator
-      const scheduleData = WORKDAYS.map((day, index) => {
-        const driverId = shuffledUsers[index % shuffledUsers.length];
-        return {
-          podId,
-          day,
-          driverId,
-          departureTime
-        };
-      });
+    const scheduleData = WORKDAYS.map((day, index) => {
+      const driverId = shuffledUsers[index % shuffledUsers.length];
+      return {
+        podId,
+        day,
+        driverId,
+        departureTime
+      };
+    });
 
-      // Use a transaction for bulk insertion to ensure atomicity
-      await prisma.$transaction(async (tx) => {
+    try {
+      const operation = async (client: any) => {
         // Clear any existing schedule for this pod
-        await tx.podSchedule.deleteMany({ where: { podId } });
+        await client.podSchedule.deleteMany({ where: { podId } });
         
-        await tx.podSchedule.createMany({
+        await client.podSchedule.createMany({
           data: scheduleData,
-          skipDuplicates: true // Handles potential unique constraint violations gracefully
+          skipDuplicates: true
         });
-      });
+      };
+
+      if (tx) {
+        await operation(tx);
+      } else {
+        await prisma.$transaction(async (newTx) => {
+          await operation(newTx);
+        });
+      }
 
       console.log(`Successfully generated initial schedule for Pod ${podId}`);
     } catch (error) {
@@ -124,6 +132,14 @@ export class PodService {
             podId,
             userId: droppedUserId
           }
+        }
+      });
+
+      // Also remove them from all schedules for this pod immediately
+      await tx.podSchedule.deleteMany({
+        where: {
+          podId,
+          driverId: droppedUserId
         }
       });
 

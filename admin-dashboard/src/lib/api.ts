@@ -1,18 +1,50 @@
-import type { 
-  DashboardStats, 
-  User, 
-  FinancialData, 
-  Transaction, 
-  VerificationRequest 
-} from '@commuteshare/shared';
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  phoneNumber: string;
+  isVerified: boolean;
+  role: string;
+  walletBalance: number;
+  commutePoints: number;
+  trustScore: number;
+  createdAt: string;
+  vehicle?: {
+    make: string;
+    model: string;
+    plateNumber: string;
+  };
+}
 
-export type { 
-  DashboardStats, 
-  User, 
-  FinancialData, 
-  Transaction, 
-  VerificationRequest 
-};
+export interface VerificationRequest {
+  id: string;
+  userId: string;
+  type: string;
+  idNumber: string;
+  documentUrl?: string;
+  selfieUrl?: string;
+  status: string;
+  createdAt: string;
+  user: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  pendingVerifications: number;
+  ridesToday: number;
+  totalRevenue: number;
+}
+
+export interface FinancialData {
+  totalSystemBalance: number;
+  pendingPayoutAmount: number;
+  recentTransactions: any[];
+  dailyVolume: { day: string; volume: number }[];
+}
 
 export interface SystemSettings {
   serviceFeePercentage: number;
@@ -23,7 +55,7 @@ export interface SystemSettings {
   emergencyContact: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001/api';
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001/api';
 
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {

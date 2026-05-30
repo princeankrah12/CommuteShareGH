@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smile_id/products/selfie/smile_id_smart_selfie_enrollment.dart';
+import 'package:smile_id/smile_id.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
+import '../app_config.dart';
 import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -15,10 +17,12 @@ class VerificationScreen extends StatefulWidget {
 
 class _VerificationScreenState extends State<VerificationScreen> {
   final TextEditingController _cardController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
   bool _isVerifying = false;
-  bool _hasCardPhoto = false;
+  String? _cardBase64;
   String? _selfieBase64;
 
+  bool get _hasCardPhoto => _cardBase64 != null;
   bool get _hasSelfie => _selfieBase64 != null;
 
   void _handleVerify() async {
@@ -83,45 +87,83 @@ class _VerificationScreenState extends State<VerificationScreen> {
       final navigator = Navigator.of(context);
       final scaffoldMessenger = ScaffoldMessenger.of(context);
 
+      // MOCK LIVENESS CHECK for simulation
+      if (AppConfig.useMockIdentity) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Launching Camera for Liveness Check...')),
+        );
+        
+        final XFile? photo = await _picker.pickImage(
+          source: ImageSource.camera,
+          preferredCameraDevice: CameraDevice.front,
+          imageQuality: 50,
+        );
+
+        if (photo != null) {
+          final bytes = await photo.readAsBytes();
+          if (mounted) {
+            setState(() {
+              _selfieBase64 = base64Encode(bytes);
+            });
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Liveness Check Photo Captured!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+        return;
+      }
+
       navigator.push(
         MaterialPageRoute(
-          builder: (context) => SmileIDSmartSelfieEnrollment(
-            userId: userId,
-            allowAgentMode: true,
-            showAttribution: true,
-            onSuccess: (resultJson) async {
-              try {
-                final Map<String, dynamic> result = jsonDecode(resultJson);
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Liveness Check')),
+            body: SmileIDSmartSelfieEnrollment(
+              userId: userId,
+              allowAgentMode: true,
+              showInstructions: true,
+              onSuccess: (resultJson) async {
+                final result = jsonDecode(resultJson);
                 final String? selfieFile = result['selfieFile'];
-                
-                if (selfieFile != null) {
-                  final bytes = await File(selfieFile).readAsBytes();
+                if (selfieFile != null && selfieFile.isNotEmpty) {
+                  try {
+                    final bytes = await File(selfieFile).readAsBytes();
+                    if (mounted) {
+                      setState(() {
+                        _selfieBase64 = base64Encode(bytes);
+                      });
+                      navigator.pop();
+                    }
+                  } catch (e) {
+                    debugPrint('Error reading selfie file: $e');
+                    if (mounted) {
+                      navigator.pop();
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(content: Text('Error processing selfie: $e')),
+                      );
+                    }
+                  }
+                } else {
                   if (mounted) {
-                    setState(() {
-                      _selfieBase64 = base64Encode(bytes);
-                    });
                     navigator.pop();
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(content: Text('Selfie capture cancelled or failed')),
+                    );
                   }
                 }
-              } catch (e) {
-                debugPrint('Error parsing Smile ID result: $e');
+              },
+              onError: (error) {
+                debugPrint('Smile ID Error: $error');
                 if (mounted) {
                   navigator.pop();
                   scaffoldMessenger.showSnackBar(
-                    SnackBar(content: Text('Error processing selfie: $e')),
+                    SnackBar(content: Text('Selfie capture failed: $error')),
                   );
                 }
-              }
-            },
-            onError: (errorMessage) {
-              debugPrint('Smile ID Error: $errorMessage');
-              if (mounted) {
-                navigator.pop();
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(content: Text('Selfie capture failed: $errorMessage')),
-                );
-              }
-            },
+              },
+            ),
           ),
         ),
       );
@@ -136,13 +178,45 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   void _simulateCardUpload() async {
-    setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() {
-        _isVerifying = false;
-        _hasCardPhoto = true;
-      });
+    try {
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Launching Camera to Scan Ghana Card...')),
+      );
+
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 50,
+      );
+
+      if (photo != null) {
+        final bytes = await photo.readAsBytes();
+        setState(() => _isVerifying = true);
+        // Simulate "Processing" the ID card locally
+        await Future.delayed(const Duration(seconds: 2));
+        
+        if (mounted) {
+          setState(() {
+            _isVerifying = false;
+            _cardBase64 = base64Encode(bytes);
+          });
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Ghana Card Scan Successful!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Card Scan Error: $e');
+      if (mounted) {
+        setState(() => _isVerifying = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Card scan failed: $e')),
+        );
+      }
     }
   }
 
@@ -189,6 +263,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
               label: 'Front of Ghana Card',
               isDone: _hasCardPhoto,
               onTap: _simulateCardUpload,
+              base64Image: _cardBase64,
             ),
             
             const SizedBox(height: 24),
@@ -199,6 +274,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
               label: 'Take a Secure Selfie',
               isDone: _hasSelfie,
               onTap: _captureSmartSelfie,
+              base64Image: _selfieBase64,
             ),
             
             const SizedBox(height: 32),
@@ -219,12 +295,18 @@ class _VerificationScreenState extends State<VerificationScreen> {
     );
   }
 
-  Widget _buildCaptureBox({required IconData icon, required String label, required bool isDone, required VoidCallback onTap}) {
+  Widget _buildCaptureBox({
+    required IconData icon, 
+    required String label, 
+    required bool isDone, 
+    required VoidCallback onTap,
+    String? base64Image,
+  }) {
     return InkWell(
       onTap: _isVerifying || isDone ? null : onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        height: 120,
         decoration: BoxDecoration(
           color: isDone ? Colors.green.withValues(alpha: 0.05) : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
@@ -232,14 +314,33 @@ class _VerificationScreenState extends State<VerificationScreen> {
             color: isDone ? Colors.green : Colors.grey[300]!,
             width: isDone ? 2 : 1,
           ),
+          image: base64Image != null 
+            ? DecorationImage(
+                image: MemoryImage(base64Decode(base64Image)),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withValues(alpha: 0.2), 
+                  BlendMode.darken
+                ),
+              )
+            : null,
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isDone ? Icons.check_circle : icon, color: isDone ? Colors.green : Colors.grey[400], size: 32),
+            Icon(
+              isDone ? Icons.check_circle : icon, 
+              color: isDone ? Colors.white : Colors.grey[400], 
+              size: 32
+            ),
             const SizedBox(height: 8),
             Text(
-              isDone ? 'Verified' : label, 
-              style: TextStyle(color: isDone ? Colors.green : Colors.grey, fontWeight: isDone ? FontWeight.bold : FontWeight.normal),
+              isDone ? 'Captured' : label, 
+              style: TextStyle(
+                color: isDone ? Colors.white : Colors.grey, 
+                fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
+                shadows: isDone ? [const Shadow(blurRadius: 4, color: Colors.black)] : null,
+              ),
             ),
           ],
         ),

@@ -123,7 +123,7 @@ export class MatchmakerService {
             }
 
             // Generate initial schedule
-            await this.generateInitialSchedule(pod.id, profiles.map(p => p.userId));
+            await this.generateInitialSchedule(pod.id, profiles.map(p => p.userId), tx);
           });
         }
       }
@@ -135,10 +135,10 @@ export class MatchmakerService {
   /**
    * Generates the first weekly driving rotation using PodService.
    */
-  private static async generateInitialSchedule(podId: string, userIds: string[]) {
+  private static async generateInitialSchedule(podId: string, userIds: string[], tx?: any) {
     logger.info(`Generating initial schedule for pod ${podId} with ${userIds.length} drivers.`);
     try {
-      await PodService.generateInitialSchedule(podId, userIds);
+      await PodService.generateInitialSchedule(podId, userIds, '06:30', tx);
     } catch (error) {
       logger.error(`Failed to generate initial schedule for pod ${podId}:`, error);
     }

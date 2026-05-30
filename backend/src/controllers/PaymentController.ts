@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
-import axios from 'axios';
 import crypto from 'crypto';
 import prisma from '../services/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import logger from '../utils/logger';
 import { TransactionType, TransactionStatus } from '@prisma/client';
+import { WalletService } from '../services/WalletService';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_mock_key';
-const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
 
 export class PaymentController {
   /**
@@ -23,40 +22,14 @@ export class PaymentController {
         return res.status(400).json({ error: 'User ID, email, and amount are required.' });
       }
 
-      // Convert GHS to Pesewas (Paystack requirement)
-      const amountPesewas = Math.round(amountGhs * 100);
+      const response = await WalletService.initializeTopUp(userId, amountGhs);
 
-      const response = await axios.post(
-        PAYSTACK_INIT_URL,
-        {
-          amount: amountPesewas,
-          email: email,
-          currency: 'GHS',
-          metadata: {
-            userId: userId,
-            amountGhs: amountGhs
-          },
-          // Optional: callback_url for frontend redirection after payment
-          // callback_url: `${process.env.FRONTEND_URL}/payment/verify`
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.status) {
-        return res.status(200).json({
-          authorization_url: response.data.data.authorization_url,
-          reference: response.data.data.reference
-        });
-      } else {
-        throw new Error(response.data.message || 'Paystack initialization failed');
-      }
+      return res.status(200).json({
+        authorization_url: response.checkoutUrl,
+        reference: response.reference
+      });
     } catch (error: any) {
-      logger.error('Payment Initialization Error:', error.response?.data || error.message);
+      logger.error('Payment Initialization Error:', error.message);
       return res.status(500).json({ error: 'Failed to initialize payment with Paystack.' });
     }
   }

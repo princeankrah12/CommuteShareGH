@@ -6,5 +6,10 @@ export default defineConfig({
     environment: 'node',
     exclude: ['**/node_modules/**', '**/dist/**', '**/cypress/**', '**/.{idea,git,cache,output,temp}/**'],
     setupFiles: ['./src/__tests__/setup.ts'],
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      }
+    }
   },
 });

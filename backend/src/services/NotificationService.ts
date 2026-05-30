@@ -1,17 +1,22 @@
+import axios from 'axios';
 import * as admin from 'firebase-admin';
 import prisma from './prisma';
 import logger from '../utils/logger';
 
-// Initialize Firebase Admin (Assuming serviceAccountKey.json is placed in the root or path set via ENV)
-const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
+const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true';
+const SMS_URL = process.env.SMS_URL || 'http://localhost:4000/api/sms/send';
 
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountPath),
-  });
-  logger.info('Firebase Admin initialized successfully.');
-} catch (error) {
-  logger.warn('Firebase Admin initialization failed. Push notifications may be disabled.', error);
+// Initialize Firebase Admin (Only if not in mock mode)
+if (!USE_MOCK_DATA) {
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccountPath),
+    });
+    logger.info('Firebase Admin initialized successfully.');
+  } catch (error) {
+    logger.warn('Firebase Admin initialization failed. Push notifications may be disabled.', error);
+  }
 }
 
 export class NotificationService {
@@ -24,8 +29,13 @@ export class NotificationService {
     body: string,
     dataPayload?: Record<string, string>
   ): Promise<void> {
+    if (USE_MOCK_DATA) {
+      logger.info(`[MOCK NOTIFICATION] To: User ${userId} | Title: "${title}" | Body: "${body}"`);
+      if (dataPayload) logger.debug(`[MOCK DATA] ${JSON.stringify(dataPayload)}`);
+      return;
+    }
+
     try {
-      // 1. Fetch user's FCM token
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { fcmToken: true },
@@ -36,18 +46,15 @@ export class NotificationService {
         return;
       }
 
-      // 2. Construct FCM message
       const message = {
         notification: { title, body },
         data: dataPayload,
         token: user.fcmToken,
       };
 
-      // 3. Send via Firebase
       await admin.messaging().send(message);
       logger.info(`Push notification sent to User ${userId}: "${title}"`);
     } catch (error: any) {
-      // Handle expired or invalid tokens
       if (error.code === 'messaging/registration-token-not-registered' || 
           error.code === 'messaging/invalid-registration-token') {
         logger.warn(`Invalid FCM token for User ${userId}. Removing from database.`);
@@ -70,8 +77,12 @@ export class NotificationService {
     body: string,
     excludeUserId?: string
   ): Promise<void> {
+    if (USE_MOCK_DATA) {
+      logger.info(`[MOCK POD NOTIFICATION] To: Pod ${podId} (Exclude: ${excludeUserId || 'None'}) | Title: "${title}" | Body: "${body}"`);
+      return;
+    }
+
     try {
-      // 1. Fetch tokens for all active pod members
       const members = await prisma.podMember.findMany({
         where: {
           podId,
@@ -92,13 +103,11 @@ export class NotificationService {
         return;
       }
 
-      // 2. Send multicast message
       const response = await admin.messaging().sendEachForMulticast({
         tokens,
         notification: { title, body },
       });
 
-      // 3. Cleanup failed tokens
       if (response.failureCount > 0) {
         const failedTokens: string[] = [];
         response.responses.forEach((resp, idx) => {
@@ -123,6 +132,22 @@ export class NotificationService {
       logger.info(`Multicast push sent to Pod ${podId}. Total tokens: ${tokens.length}`);
     } catch (error: any) {
       logger.error(`FCM multicast error for Pod ${podId}:`, error.message);
+    }
+  }
+
+  /**
+   * Sends an SMS (OTP or Alerts) via external API.
+   */
+  static async sendSMS(phoneNumber: string, message: string): Promise<void> {
+    logger.info(`[NotificationService] Sending SMS to ${phoneNumber}...`);
+    try {
+      await axios.post(SMS_URL, {
+        to: phoneNumber,
+        message: message
+      });
+      logger.info(`[NotificationService] SMS sent to ${phoneNumber} successfully.`);
+    } catch (error: any) {
+      logger.error(`[NotificationService] Error sending SMS to ${phoneNumber}:`, error.message);
     }
   }
 }

@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CommuteShare GH'),
+        title: const Text('MyCommuteShare'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

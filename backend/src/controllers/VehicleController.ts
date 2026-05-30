@@ -10,22 +10,33 @@ export class VehicleController {
   static async register(req: AuthRequest, res: Response) {
     try {
       const ownerId = req.user!.id;
-      const { make, model, year, licensePlate, color, seatCapacity } = req.body;
+      const { 
+        make, 
+        model, 
+        year, 
+        licensePlate, 
+        plateNumber, // Mobile uses this
+        color, 
+        seatCapacity 
+      } = req.body;
 
-      if (!make || !model || !licensePlate || !year || !seatCapacity) {
+      const finalPlate = licensePlate || plateNumber;
+      const finalYear = year ? parseInt(year) : new Date().getFullYear();
+
+      if (!make || !model || !finalPlate || !seatCapacity) {
         return res.status(400).json({ 
-          error: 'Missing required vehicle information (make, model, year, licensePlate, seatCapacity)' 
+          error: 'Missing required vehicle information (make, model, plateNumber, seatCapacity)' 
         });
       }
 
-      logger.info(`Registering vehicle for user ${ownerId}: ${year} ${make} ${model} (${licensePlate})`);
+      logger.info(`Registering vehicle for user ${ownerId}: ${finalYear} ${make} ${model} (${finalPlate})`);
       
       const vehicle = await VehicleService.registerVehicle({
         ownerId,
         make,
         model,
-        year: parseInt(year),
-        licensePlate,
+        year: finalYear,
+        licensePlate: finalPlate,
         color: color || 'Unknown',
         seatCapacity: parseInt(seatCapacity),
       });

@@ -11,9 +11,9 @@ We only provide security updates for the current major version.
 
 ## Reporting a Vulnerability
 
-We take the security of CommuteShareGH seriously. If you believe you have found a security vulnerability, please do NOT open a public issue.
+We take the security of MyCommuteShare seriously. If you believe you have found a security vulnerability, please do NOT open a public issue.
 
-Instead, please send an email to security@commutesharegh.com.
+Instead, please send an email to security@mycommuteshare.com.
 
 Please include:
 - A description of the vulnerability.

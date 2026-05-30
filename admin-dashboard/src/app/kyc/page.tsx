@@ -1,79 +1,63 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   CheckCircle, 
   XCircle, 
   FileText, 
   ShieldCheck, 
-  UserCheck, 
   Search,
-  ExternalLink,
   MoreVertical,
   AlertTriangle,
-  BadgeCheck
+  BadgeCheck,
+  Loader2
 } from 'lucide-react';
-
-interface Verification {
-  id: string;
-  name: string;
-  role: 'Driver' | 'Rider';
-  ghanaCardId: string;
-  company: string;
-  dateSubmitted: string;
-  riskScore: 'Low' | 'Medium' | 'High';
-  avatar: string;
-}
-
-const initialVerifications: Verification[] = [
-  {
-    id: '1',
-    name: 'Kofi Mensah',
-    role: 'Driver',
-    ghanaCardId: 'GHA-712345678-9',
-    company: 'Stanbic Bank',
-    dateSubmitted: '2026-02-26 09:15',
-    riskScore: 'Low',
-    avatar: 'K'
-  },
-  {
-    id: '2',
-    name: 'Ama Serwaa',
-    role: 'Rider',
-    ghanaCardId: 'GHA-823456789-0',
-    company: 'MTN Ghana',
-    dateSubmitted: '2026-02-26 14:30',
-    riskScore: 'Low',
-    avatar: 'A'
-  },
-  {
-    id: '3',
-    name: 'Kwame Boateng',
-    role: 'Driver',
-    ghanaCardId: 'GHA-123456789-1',
-    company: 'Ecobank Ghana',
-    dateSubmitted: '2026-02-27 08:45',
-    riskScore: 'Medium',
-    avatar: 'K'
-  },
-  {
-    id: '4',
-    name: 'Esi Osei',
-    role: 'Rider',
-    ghanaCardId: 'GHA-934567890-2',
-    company: 'Vodafone Ghana',
-    dateSubmitted: '2026-02-27 10:20',
-    riskScore: 'Low',
-    avatar: 'E'
-  }
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, VerificationRequest } from '@/lib/api';
 
 export default function KYCPage() {
-  const [verifications, setVerifications] = useState<Verification[]>(initialVerifications);
+  const queryClient = useQueryClient();
 
-  const handleProcess = (id: string) => {
-    setVerifications(prev => prev.filter(v => v.id !== id));
+  const { data: verifications, isLoading, error } = useQuery({
+    queryKey: ['pending-verifications'],
+    queryFn: api.getPendingVerifications,
+    refetchInterval: 30000,
+  });
+
+  const mutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'APPROVED' | 'REJECTED' }) => 
+      api.verificationAction(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+
+  const handleProcess = (id: string, status: 'APPROVED' | 'REJECTED') => {
+    mutation.mutate({ id, status });
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#0f172a]">
+        <Loader2 className="animate-spin text-[#FFD700]" size={48} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 bg-[#0f172a] min-h-screen flex items-center justify-center">
+        <div className="text-center text-red-400">
+          <AlertTriangle size={48} className="mx-auto mb-4" />
+          <h2 className="text-xl font-bold">Failed to load verifications</h2>
+          <p className="mt-2 text-sm">{(error as any).message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const verificationsList = (verifications || []) as VerificationRequest[];
 
   return (
     <div className="p-8 bg-slate-900 min-h-screen text-slate-200">
@@ -87,14 +71,13 @@ export default function KYCPage() {
           <h1 className="text-4xl font-bold text-white tracking-tight">Trust & Verification Center</h1>
           <p className="text-slate-400 mt-2 max-w-2xl">
             Review pending Ghana Card and Work Email verifications to maintain platform integrity. 
-            Maintain "Inbox Zero" for optimal system health.
           </p>
         </div>
         
         <div className="flex items-center space-x-4">
           <div className="text-right mr-4">
             <p className="text-[10px] text-slate-500 font-bold uppercase">Pending Review</p>
-            <p className="text-2xl font-black text-[#FFD700]">{verifications.length}</p>
+            <p className="text-2xl font-black text-[#FFD700]">{verificationsList.length}</p>
           </div>
           <div className="h-10 w-px bg-slate-800"></div>
           <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all border border-slate-700 flex items-center">
@@ -110,16 +93,15 @@ export default function KYCPage() {
             <thead>
               <tr className="border-b border-slate-700 bg-slate-800/50">
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Applicant</th>
-                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Identity & Corporate</th>
-                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Risk Assessment</th>
+                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Identity & Type</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Date Submitted</th>
                 <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {verifications.length === 0 ? (
+              {verificationsList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
+                  <td colSpan={4} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle size={32} />
@@ -130,24 +112,16 @@ export default function KYCPage() {
                   </td>
                 </tr>
               ) : (
-                verifications.map((v) => (
+                verificationsList.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-700/30 transition-colors group">
                     <td className="px-6 py-5">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 rounded-full bg-[#0A192F] flex items-center justify-center text-[#FFD700] font-bold border border-slate-700">
-                          {v.avatar}
+                          {v.user.fullName[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">{v.name}</p>
-                          <div className="flex items-center mt-1">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                              v.role === 'Driver' 
-                                ? 'bg-[#FFD700]/10 text-[#FFD700]' 
-                                : 'bg-blue-500/10 text-blue-400'
-                            }`}>
-                              {v.role}
-                            </span>
-                          </div>
+                          <p className="text-sm font-bold text-white">{v.user.fullName}</p>
+                          <p className="text-[10px] text-slate-400">{v.user.email}</p>
                         </div>
                       </div>
                     </td>
@@ -155,41 +129,31 @@ export default function KYCPage() {
                       <div className="space-y-1">
                         <div className="flex items-center text-xs text-slate-300 font-mono">
                           <FileText size={14} className="mr-2 text-slate-500" />
-                          {v.ghanaCardId}
+                          {v.idNumber}
                         </div>
                         <div className="flex items-center text-xs text-slate-400">
                           <BadgeCheck size={14} className="mr-2 text-blue-400" />
-                          {v.company}
+                          {v.type.replace('_', ' ')}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          v.riskScore === 'Low' ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <span className={`text-xs font-bold ${
-                          v.riskScore === 'Low' ? 'text-green-500' : 'text-yellow-500'
-                        }`}>
-                          {v.riskScore} Risk
-                        </span>
-                      </div>
-                    </td>
                     <td className="px-6 py-5 text-xs text-slate-400 font-medium">
-                      {v.dateSubmitted}
+                      {new Date(v.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end space-x-2">
                         <button 
-                          onClick={() => handleProcess(v.id)}
-                          className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white transition-all text-xs font-bold"
+                          onClick={() => handleProcess(v.id, 'APPROVED')}
+                          disabled={mutation.isPending}
+                          className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-green-500/30 text-green-500 hover:bg-green-500 hover:text-white transition-all text-xs font-bold disabled:opacity-50"
                         >
                           <CheckCircle size={14} />
                           <span>Approve</span>
                         </button>
                         <button 
-                          onClick={() => handleProcess(v.id)}
-                          className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs font-bold"
+                          onClick={() => handleProcess(v.id, 'REJECTED')}
+                          disabled={mutation.isPending}
+                          className="flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs font-bold disabled:opacity-50"
                         >
                           <XCircle size={14} />
                           <span>Reject</span>
@@ -204,24 +168,6 @@ export default function KYCPage() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Footer Info */}
-      <div className="mt-8 flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-slate-500">
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-            All Identity Services Operational
-          </div>
-          <div className="flex items-center">
-            <AlertTriangle size={12} className="mr-2 text-yellow-500" />
-            2 Pending Escalations
-          </div>
-        </div>
-        <div className="flex items-center space-x-2 cursor-pointer hover:text-white transition-colors">
-          <span>Verification Log Architecture</span>
-          <ExternalLink size={12} />
         </div>
       </div>
     </div>

@@ -9,7 +9,11 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@commuteshare/shared": ["../shared/types.ts"]
+    }
   },
   "include": ["src/**/*", "prisma/**/*", "*.ts"],
   "exclude": ["node_modules"]

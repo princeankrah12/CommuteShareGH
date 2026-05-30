@@ -35,7 +35,9 @@ export class WebhookController {
       .update(JSON.stringify(req.body))
       .digest('hex');
 
-    if (hash !== signature) {
+    const isMock = process.env.USE_MOCK_DATA === 'true' && signature === 'MOCK_SIGNATURE';
+
+    if (hash !== signature && !isMock) {
       logger.error('Invalid Paystack signature');
       return res.status(401).send('Invalid signature');
     }
@@ -56,12 +58,8 @@ export class WebhookController {
       logger.info(`Processing successful Paystack payment: ${data.reference}`);
 
       try {
-        // --- PLACEHOLDER: Call WalletService.updateBalance() via Prisma ---
-        // await WalletService.updateBalance(data.customer.email, data.amount / 100); 
-        // Note: Paystack amount is in kobo/pesewas
-        
-        // Example logic from WalletService.verifyTopUp could be integrated here
-        // await WalletService.verifyTopUp(data.reference);
+        // Fire WalletService to update the DB balance
+        await WalletService.verifyTopUp(data.reference);
 
         // Store transaction_id in Redis for 24 hours to prevent duplicate processing
         await redis.setex(transactionId, 86400, 'processed');

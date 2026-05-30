@@ -1,9 +1,10 @@
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:flutter/foundation.dart';
+import '../app_config.dart';
 
 class RealtimeService {
   late io.Socket socket;
-  final String serverUrl = 'http://10.0.2.2:3001'; // For Android Emulator
+  final String serverUrl = AppConfig.socketUrl;
 
   void connect() {
     socket = io.io(serverUrl, 

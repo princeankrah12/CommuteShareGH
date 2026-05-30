@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
 
@@ -16,7 +18,13 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
   final _modelController = TextEditingController();
   final _plateController = TextEditingController();
   final _colorController = TextEditingController();
+  final _capacityController = TextEditingController(text: '4');
   
+  final ImagePicker _picker = ImagePicker();
+  File? _frontPhoto;
+  File? _sidePhoto;
+  File? _interiorPhoto;
+
   bool _hasAC = true;
   bool _isSubmitting = false;
 
@@ -26,7 +34,29 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
     _modelController.dispose();
     _plateController.dispose();
     _colorController.dispose();
+    _capacityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(String type) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          if (type == 'Front') _frontPhoto = File(image.path);
+          if (type == 'Side') _sidePhoto = File(image.path);
+          if (type == 'Interior') _interiorPhoto = File(image.path);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
   }
 
   void _handleSubmit() async {
@@ -35,8 +65,18 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
     if (!_hasAC) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Functional AC is required for CommuteShare GH.'),
+          content: Text('Functional AC is required for MyCommuteShare.'),
           backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_frontPhoto == null || _sidePhoto == null || _interiorPhoto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload all 3 photos.'),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -55,6 +95,7 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
         plateNumber: _plateController.text.trim(),
         color: _colorController.text.trim(),
         hasAC: _hasAC,
+        seatCapacity: int.parse(_capacityController.text.trim()),
       );
       
       if (mounted) {
@@ -150,6 +191,23 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _capacityController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Seat Capacity',
+                  prefixIcon: Icon(Icons.event_seat),
+                  hintText: 'Exclude driver seat',
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  final n = int.tryParse(v);
+                  if (n == null || n < 1) return 'Invalid capacity';
+                  return null;
+                },
+                enabled: !_isSubmitting,
+              ),
               const SizedBox(height: 24),
               
               // AC Mandate Toggle
@@ -192,9 +250,9 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildPhotoPlaceholder('Front'),
-                  _buildPhotoPlaceholder('Side'),
-                  _buildPhotoPlaceholder('Interior'),
+                  _buildPhotoPlaceholder('Front', _frontPhoto),
+                  _buildPhotoPlaceholder('Side', _sidePhoto),
+                  _buildPhotoPlaceholder('Interior', _interiorPhoto),
                 ],
               ),
               
@@ -213,22 +271,30 @@ class _VehicleUploadScreenState extends State<VehicleUploadScreen> {
     );
   }
 
-  Widget _buildPhotoPlaceholder(String label) {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
+  Widget _buildPhotoPlaceholder(String label, File? imageFile) {
+    return GestureDetector(
+      onTap: _isSubmitting ? null : () => _pickImage(label),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+              image: imageFile != null 
+                ? DecorationImage(image: FileImage(imageFile), fit: BoxFit.cover) 
+                : null,
+            ),
+            child: imageFile == null 
+              ? const Icon(Icons.add_a_photo, color: Colors.grey)
+              : null,
           ),
-          child: const Icon(Icons.add_a_photo, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
     );
   }
 }

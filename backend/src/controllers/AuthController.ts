@@ -4,7 +4,20 @@ import prisma from '../services/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
 export class AuthController {
+  static async devLogin(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email is required' });
+      const result = await AuthService.devLogin(email);
+      res.json(result);
+    } catch (error: any) {
+      res.status(401).json({ error: error.message });
+    }
+  }
+
   static async googleLogin(req: Request, res: Response) {
+    console.log('--- Received Google Login Request ---');
+    console.log('Body:', JSON.stringify(req.body));
     try {
       const { idToken } = req.body;
       if (!idToken) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import '../services/api_service.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -9,56 +11,47 @@ class WalletScreen extends StatefulWidget {
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen> {
+class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
   int _balance = 0;
   int _strikes = 0;
-  
-  // Mock transactions for UI demonstration
-  final List<Map<String, dynamic>> _mockTransactions = [
-    {
-      'title': 'Shift Completed',
-      'amount': 10,
-      'date': 'Oct 10',
-      'isPositive': true
-    },
-    {
-      'title': 'Rider No-Show Comp',
-      'amount': 50,
-      'date': 'Oct 12',
-      'isPositive': true
-    },
-    {
-      'title': 'Late Cancellation Penalty',
-      'amount': -150,
-      'date': 'Oct 14',
-      'isPositive': false
-    },
-    {
-      'title': 'Rescue Mission Bonus',
-      'amount': 50,
-      'date': 'Oct 15',
-      'isPositive': true
-    },
-  ];
+  List<dynamic> _transactions = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchWalletData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchWalletData();
+    }
   }
 
   Future<void> _fetchWalletData() async {
     try {
-      // Simulate network delay for premium feel
-      await Future.delayed(const Duration(milliseconds: 800));
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.user?.id;
       
+      if (userId == null) return;
+
       final data = await ApiService.getWalletDetails();
+      final txs = await ApiService.getTransactions(userId);
       
       if (mounted) {
         setState(() {
           _balance = data['commutePoints'] ?? 0;
           _strikes = data['strikes'] ?? 0;
+          _transactions = txs;
           _isLoading = false;
         });
       }
@@ -319,13 +312,23 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _buildTransactionList() {
+    if (_transactions.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Center(child: Text("No recent transactions")),
+      );
+    }
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _mockTransactions.length,
+      itemCount: _transactions.length,
       itemBuilder: (context, index) {
-        final tx = _mockTransactions[index];
-        final bool isPositive = tx['isPositive'];
+        final tx = _transactions[index];
+        final bool isPositive = tx.type == 'TOP_UP' || tx.type == 'RIDE_PAYOUT' || tx.type == 'PROMO';
+        
+        final String title = tx.type == 'TOP_UP' ? 'Wallet Top-up' : (tx.description ?? tx.type);
+        final String dateStr = "${tx.createdAt.day}/${tx.createdAt.month}/${tx.createdAt.year}";
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -343,12 +346,12 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ),
             title: Text(
-              tx['title'],
+              title,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            subtitle: Text(tx['date']),
+            subtitle: Text(dateStr),
             trailing: Text(
-              '${isPositive ? "+" : ""}${tx['amount']} CP',
+              '${isPositive ? "+" : ""}${tx.amount.toInt()} CP',
               style: TextStyle(
                 color: isPositive ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,

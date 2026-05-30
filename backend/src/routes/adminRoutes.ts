@@ -72,10 +72,10 @@ router.get('/verifications/pending', async (req, res) => {
         }
       }
     });
-    res.json(pending.length > 0 ? pending : DUMMY_VERIFICATIONS);
+    res.json(pending);
   } catch (error) {
-    console.error('Verifications DB fail, using mock:', error);
-    res.json(DUMMY_VERIFICATIONS);
+    console.error('Verifications DB fail:', error);
+    res.status(500).json({ error: 'Database error fetching verifications' });
   }
 });
 
@@ -84,6 +84,11 @@ router.post('/verifications/:id/action', async (req, res) => {
   const { id } = req.params;
   const { status, reason } = req.body;
   try {
+    // If it's a mock ID, just return success
+    if (id.startsWith('v')) {
+      return res.json({ id, status, message: 'Mock verification updated' });
+    }
+
     const verification = await prisma.verificationRequest.update({
       where: { id },
       data: { status, rejectionReason: reason },
@@ -99,10 +104,6 @@ router.post('/verifications/:id/action', async (req, res) => {
 
     res.json(verification);
   } catch (error) {
-    // If it's a mock ID, just return success
-    if (id.startsWith('v')) {
-      return res.json({ id, status, message: 'Mock verification updated' });
-    }
     res.status(500).json({ error: 'Failed to update verification' });
   }
 });
@@ -126,11 +127,11 @@ router.get('/financials', async (req, res) => {
     });
   }
   try {
-    const totalSystemBalance = await prisma.wallet.aggregate({
+    const totalSystemBalanceSum = await prisma.wallet.aggregate({
       _sum: { balance: true }
     });
     
-    const pendingPayouts = await prisma.transaction.aggregate({
+    const pendingPayoutsSum = await prisma.transaction.aggregate({
       _sum: { amount: true },
       where: { type: 'CASHOUT', status: 'PENDING' }
     });
@@ -170,44 +171,23 @@ router.get('/financials', async (req, res) => {
       };
     }));
 
-    // If no volume data, use mock for the chart
-    const mockVolume = [
-      { day: 'Mon', volume: 1200 },
-      { day: 'Tue', volume: 2100 },
-      { day: 'Wed', volume: 1800 },
-      { day: 'Thu', volume: 2400 },
-      { day: 'Fri', volume: 3200 },
-      { day: 'Sat', volume: 1500 },
-      { day: 'Sun', volume: 900 },
-    ];
-
     res.json({
-      totalSystemBalance: Number(totalSystemBalance._sum.balance) || 125000,
-      pendingPayoutAmount: Number(pendingPayouts._sum.amount) || 4500,
-      recentTransactions: recentTransactions.length > 0 ? recentTransactions : DUMMY_TRANSACTIONS,
-      dailyVolume: dailyVolume.some(v => v.volume > 0) ? dailyVolume : mockVolume
+      totalSystemBalance: Number(totalSystemBalanceSum._sum.balance) || 0,
+      pendingPayoutAmount: Number(pendingPayoutsSum._sum.amount) || 0,
+      recentTransactions: recentTransactions,
+      dailyVolume: dailyVolume
     });
   } catch (error) {
-    console.error('Financials DB fail, using mock:', error);
-    res.json({
-      totalSystemBalance: 125000,
-      pendingPayoutAmount: 4500,
-      recentTransactions: DUMMY_TRANSACTIONS,
-      dailyVolume: [
-        { day: 'Mon', volume: 1200 },
-        { day: 'Tue', volume: 2100 },
-        { day: 'Wed', volume: 1800 },
-        { day: 'Thu', volume: 2400 },
-        { day: 'Fri', volume: 3200 },
-        { day: 'Sat', volume: 1500 },
-        { day: 'Sun', volume: 900 },
-      ]
-    });
+    console.error('Financials DB fail:', error);
+    res.status(500).json({ error: 'Database error fetching financials' });
   }
 });
 
 // List Pending Payouts
 router.get('/payouts/pending', async (req, res) => {
+  if (process.env.USE_MOCK_DATA === 'true') {
+    return res.json(DUMMY_TRANSACTIONS.filter(t => t.status === 'PENDING'));
+  }
   try {
     const pending = await prisma.transaction.findMany({
       where: { type: 'CASHOUT', status: 'PENDING' },
@@ -216,10 +196,10 @@ router.get('/payouts/pending', async (req, res) => {
       },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(pending.length > 0 ? pending : DUMMY_TRANSACTIONS.filter(t => t.status === 'PENDING'));
+    res.json(pending);
   } catch (error) {
-    console.error('Pending payouts DB fail, using mock:', error);
-    res.json(DUMMY_TRANSACTIONS.filter(t => t.status === 'PENDING'));
+    console.error('Pending payouts DB fail:', error);
+    res.status(500).json({ error: 'Database error fetching payouts' });
   }
 });
 
@@ -228,15 +208,17 @@ router.post('/payouts/:id/action', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
+    // If it's a mock ID, just return success
+    if (id.startsWith('t')) {
+       return res.json({ id, status: status === 'APPROVED' ? 'SUCCESS' : 'FAILED' });
+    }
+
     const tx = await prisma.transaction.update({
       where: { id },
       data: { status: status === 'APPROVED' ? 'SUCCESS' : 'FAILED' }
     });
     res.json(tx);
   } catch (error) {
-    if (id.startsWith('t')) {
-       return res.json({ id, status: status === 'APPROVED' ? 'SUCCESS' : 'FAILED' });
-    }
     res.status(500).json({ error: 'Failed to update payout' });
   }
 });

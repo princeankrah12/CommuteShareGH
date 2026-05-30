@@ -64,11 +64,8 @@ export class WalletController {
       const userId = req.user!.id;
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: {
-          commutePoints: true,
-          commuteProfile: {
-            select: { strikes: true }
-          }
+        include: {
+          commuteProfile: true
         }
       });
 

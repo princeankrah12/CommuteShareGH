@@ -28,8 +28,8 @@ class _AffinityVerificationScreenState extends State<AffinityVerificationScreen>
     });
 
     try {
-      // Simulate sending OTP/Link via Backend
-      await Future.delayed(const Duration(seconds: 2));
+      final userProvider = context.read<UserProvider>();
+      await userProvider.requestWorkVerification(email);
       
       if (mounted) {
         setState(() {
@@ -61,7 +61,7 @@ class _AffinityVerificationScreenState extends State<AffinityVerificationScreen>
 
     try {
       // Use the actual API to link the email
-      await userProvider.verifyWorkEmail(_emailController.text.trim());
+      await userProvider.verifyWorkEmail(_emailController.text.trim(), _otpController.text.trim());
       
       if (mounted) {
         scaffoldMessenger.showSnackBar(

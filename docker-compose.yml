@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.4-alpine
     restart: always
     environment:
       - POSTGRES_USER=postgres
@@ -32,6 +32,14 @@ services:
     depends_on:
       - db
       - redis
+
+  simulators:
+    build: ./simulators
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
 
 volumes:
   db_data:

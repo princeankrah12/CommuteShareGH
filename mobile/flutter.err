@@ -1,0 +1,9 @@
+../../runtime/vm/os_thread.cc: 349: error: Could not start thread DartWorker: 22 (The device does not recognize the command.
+)
+version=3.10.8 (stable) (Tue Jan 27 00:02:04 2026 -0800) on "windows_x64"
+pid=22796, thread=10880, isolate_group=(nil)(0000000000000000), isolate=(nil)(0000000000000000)
+os=windows, arch=x64, comp=no, sim=no
+isolate_instructions=0, vm_instructions=7ff789c38080
+fp=837d8ff000, sp=837d8fefb8, pc=7ff789f1dce3
+  pc 0x00007ff789f1dce3 fp 0x000000837d8ff000 Dart_DetectNullSafety+0x2dd5d3
+-- End of DumpStackTrace

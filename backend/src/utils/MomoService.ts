@@ -1,36 +1,38 @@
+import axios from 'axios';
 import logger from '../utils/logger';
+
+const MOMO_URL = process.env.MOMO_URL || 'http://localhost:4000/api/momo';
 
 export class MomoService {
   /**
-   * Simulates an external API call to a MoMo provider (e.g., Paystack, Hubtel)
+   * Initiates an external API call to a MoMo provider.
    */
   static async initiatePayment(phoneNumber: string, amount: number, reference: string) {
     logger.info(`[MomoService] Initiating GHS ${amount} payment request to ${phoneNumber}...`);
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // In a real scenario, this would return a checkout URL or a request ID
-    return {
-      status: 'success',
-      providerReference: `MOMO-EXT-${Math.random().toString(36).substring(7).toUpperCase()}`,
-      message: 'Payment request sent to device'
-    };
+    try {
+      const response = await axios.post(`${MOMO_URL}/initiate`, {
+        phoneNumber,
+        amount,
+        reference
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('MomoService initiatePayment Error:', error.message);
+      throw new Error('Failed to initiate MoMo payment');
+    }
   }
 
   /**
-   * Simulates checking the status of a transaction
+   * Checks the status of a transaction
    */
   static async verifyPayment(reference: string) {
     logger.info(`[MomoService] Verifying payment for reference ${reference}...`);
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // For this simulation, we always return success
-    return {
-      status: 'SUCCESSFUL',
-      amount: 0, // In real life, verify the amount matches
-    };
+    try {
+      const response = await axios.get(`${MOMO_URL}/verify/${reference}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error('MomoService verifyPayment Error:', error.message);
+      throw new Error('Failed to verify MoMo payment');
+    }
   }
 }

@@ -8,6 +8,7 @@ const router = Router();
 
 router.post('/signup', validate(signupSchema), AuthController.signup);
 router.post('/google-login', AuthController.googleLogin);
+router.post('/dev-login', AuthController.devLogin);
 
 // Protected routes
 router.get('/me', authMiddleware, AuthController.getCurrentUser);

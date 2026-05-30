@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/app_models.dart';
 import '../providers/user_provider.dart';
+import '../app_config.dart';
 
 class RatingDialog extends StatefulWidget {
   final Ride ride;
@@ -27,7 +28,7 @@ class _RatingDialogState extends State<RatingDialog> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:3000/api/rides/rate'),
+        Uri.parse('${AppConfig.apiUrl}/rides/rate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'rideId': widget.ride.id,

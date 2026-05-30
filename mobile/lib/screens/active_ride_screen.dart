@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:slide_to_act/slide_to_act.dart';
+import 'package:latlong2/latlong.dart';
 import '../services/api_service.dart';
+import '../widgets/live_map_widget.dart';
 
 class ActiveRideScreen extends StatefulWidget {
   final String rideId;
@@ -90,23 +92,12 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
       ),
       body: Stack(
         children: [
-          // 1. Map View Placeholder
-          Container(
-            color: Colors.grey[300],
-            width: double.infinity,
-            height: double.infinity,
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.map, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'Real-time Map View',
-                    style: TextStyle(fontSize: 18, color: Colors.black54),
-                  ),
-                ],
-              ),
+          // 1. Live Map View
+          Positioned.fill(
+            child: LiveMapWidget(
+              rideId: widget.rideId,
+              initialDriverPos: const LatLng(5.6037, -0.1870), // Mock coordinates for Accra
+              destinationPos: const LatLng(5.6200, -0.2000),
             ),
           ),
 

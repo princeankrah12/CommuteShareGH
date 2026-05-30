@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:smile_id/smile_id.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
 import './theme/app_theme.dart';
 import './providers/user_provider.dart';
 import './screens/splash_screen.dart';
@@ -13,7 +14,9 @@ import './services/fcm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   if (Platform.isWindows || Platform.isLinux) {
@@ -32,19 +35,19 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
-      child: const CommuteShareApp(),
+      child: const MyCommuteShareApp(),
     ),
   );
 }
 
-class CommuteShareApp extends StatefulWidget {
-  const CommuteShareApp({super.key});
+class MyCommuteShareApp extends StatefulWidget {
+  const MyCommuteShareApp({super.key});
 
   @override
-  State<CommuteShareApp> createState() => _CommuteShareAppState();
+  State<MyCommuteShareApp> createState() => _MyCommuteShareAppState();
 }
 
-class _CommuteShareAppState extends State<CommuteShareApp> {
+class _MyCommuteShareAppState extends State<MyCommuteShareApp> {
   @override
   void initState() {
     super.initState();
@@ -54,7 +57,7 @@ class _CommuteShareAppState extends State<CommuteShareApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CommuteShare GH',
+      title: 'MyCommuteShare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),

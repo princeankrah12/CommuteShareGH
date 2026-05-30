@@ -56,16 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleSkip() async {
-    await Provider.of<UserProvider>(context, listen: false).loginMock();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const Icon(Icons.directions_car, size: 100, color: AppTheme.accentGold),
             const SizedBox(height: 24),
             const Text(
-              'CommuteShare GH',
+              'MyCommuteShare',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 32,
@@ -112,14 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            if (!_isLoggingIn)
-              TextButton(
-                onPressed: _handleSkip,
-                child: const Text(
-                  'Skip to Demo (Mock User)',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
+
             const SizedBox(height: 24),
             const Text(
               'Safe • Reliable • Sustainable',

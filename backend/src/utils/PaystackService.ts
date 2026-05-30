@@ -1,5 +1,10 @@
+import axios from 'axios';
 import logger from './logger';
 
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_mock_key';
+const PAYSTACK_BASE_URL = process.env.PAYSTACK_URL || 'https://api.paystack.co';
+const PAYSTACK_INIT_URL = `${PAYSTACK_BASE_URL}/transaction/initialize`;
+const PAYSTACK_VERIFY_URL = `${PAYSTACK_BASE_URL}/transaction/verify`;
 export interface PaystackInitializeResponse {
   status: boolean;
   message: string;
@@ -12,54 +17,46 @@ export interface PaystackInitializeResponse {
 
 export class PaystackService {
   /**
-   * Simulates the Paystack Transaction Initialize API
+   * Initializes a Paystack transaction
    */
   static async initializeTransaction(email: string, amountGHS: number): Promise<PaystackInitializeResponse> {
-    logger.info(`[Paystack] Initializing transaction for ${email} (GHS ${amountGHS})...`);
-    
-    // Convert to Kobo/Pesewas for simulation (Paystack uses smallest currency unit)
-    const amountInPesewas = amountGHS * 100;
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const reference = `CSGH-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
-
-    return {
-      status: true,
-      message: "Authorization URL created",
-      data: {
-        authorization_url: `https://checkout.paystack.com/${Math.random().toString(36).substring(7)}`,
-        access_code: Math.random().toString(36).substring(7),
-        reference
-      }
-    };
+    try {
+      const amountInPesewas = Math.round(amountGHS * 100);
+      const response = await axios.post(
+        PAYSTACK_INIT_URL,
+        {
+          amount: amountInPesewas,
+          email: email,
+          currency: 'GHS',
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      logger.error('Paystack Initialization Error:', error.response?.data || error.message);
+      throw new Error('Failed to initialize payment with Paystack');
+    }
   }
 
   /**
-   * Simulates the Paystack Transaction Verify API
+   * Verifies a Paystack transaction
    */
   static async verifyTransaction(reference: string) {
-    logger.info(`[Paystack] Verifying transaction: ${reference}...`);
-    
-    await new Promise(resolve => setTimeout(resolve, 1200));
-
-    // Simulation logic: References ending in 'FAIL' will fail
-    if (reference.endsWith('FAIL')) {
-      return {
-        status: false,
-        message: "Transaction not found",
-      };
+    try {
+      const response = await axios.get(`${PAYSTACK_VERIFY_URL}/${reference}`, {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      logger.error('Paystack Verification Error:', error.response?.data || error.message);
+      throw new Error('Failed to verify payment with Paystack');
     }
-
-    return {
-      status: true,
-      data: {
-        status: "success",
-        amount: 5000, // Example: 50.00 GHS in pesewas
-        currency: "GHS",
-        gateway_response: "Successful",
-        channel: "mobile_money"
-      }
-    };
   }
 }

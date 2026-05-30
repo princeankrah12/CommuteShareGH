@@ -2,7 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../services/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-ghana-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
 
 export interface AuthRequest extends Request {
   user?: {
@@ -20,9 +24,26 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 
   const token = authHeader.split(' ')[1];
 
-  // Demo/Mock Token Support
-  if (token === 'mock-jwt-token') {
-    req.user = { id: 'u1', email: 'kojo@example.com' };
+  // Demo/Mock Token Support (Development Only)
+  if (process.env.NODE_ENV !== 'production' && token === 'mock-jwt-token') {
+    const mockId = 'u1';
+    const mockEmail = 'kojo@example.com';
+
+    // Upsert the mock user to ensure database operations (like KYC) don't fail
+    const user = await prisma.user.upsert({
+      where: { id: mockId },
+      update: {},
+      create: {
+        id: mockId,
+        email: mockEmail,
+        fullName: 'Kojo Mensah',
+        phoneNumber: '0244000000',
+        referralCode: 'MOCK-DEMO',
+        isVerified: false,
+      }
+    });
+
+    req.user = { id: user.id, email: user.email };
     return next();
   }
 

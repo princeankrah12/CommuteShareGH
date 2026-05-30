@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../screens/ride_results_screen.dart';
 import '../providers/user_provider.dart';
 import '../services/api_service.dart';
+import '../models/app_models.dart';
+import './landmark_search_delegate.dart';
 
 class RideSearchCard extends StatefulWidget {
   const RideSearchCard({super.key});
@@ -15,6 +17,25 @@ class RideSearchCard extends StatefulWidget {
 class _RideSearchCardState extends State<RideSearchCard> {
   bool _communityOnly = false;
   bool _isLoading = false;
+
+  Landmark? _pickup;
+  Landmark? _destination;
+
+  Future<void> _selectLandmark(bool isPickup) async {
+    final result = await showSearch<Landmark?>(
+      context: context,
+      delegate: LandmarkSearchDelegate(),
+    );
+    if (result != null) {
+      setState(() {
+        if (isPickup) {
+          _pickup = result;
+        } else {
+          _destination = result;
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +76,9 @@ class _RideSearchCardState extends State<RideSearchCard> {
           const SizedBox(height: 16),
           _buildLocationField(
             icon: Icons.my_location,
-            label: 'Pickup Landmark',
-            value: 'Adenta Barrier',
+            label: 'Pickup',
+            value: _pickup?.name ?? 'Tap to select generic pickup hub',
+            onTap: () => _selectLandmark(true),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 36.0),
@@ -64,13 +86,14 @@ class _RideSearchCardState extends State<RideSearchCard> {
           ),
           _buildLocationField(
             icon: Icons.location_on,
-            label: 'Destination Landmark',
-            value: 'Ridge',
+            label: 'Destination',
+            value: _destination?.name ?? 'Tap to select generic destination',
             iconColor: Colors.redAccent,
+            onTap: () => _selectLandmark(false),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: _isLoading ? null : () async {
+            onPressed: (_isLoading || _pickup == null || _destination == null) ? null : () async {
               debugPrint('RideSearchCard: Search button clicked');
               setState(() => _isLoading = true);
               
@@ -79,10 +102,9 @@ class _RideSearchCardState extends State<RideSearchCard> {
 
               try {
                 debugPrint('RideSearchCard: Calling ApiService.searchRides...');
-                // In a real app, we'd use actual landmark IDs from a dropdown
                 final rides = await ApiService.searchRides(
-                  'l1', 
-                  'l2', 
+                  _pickup!.id, 
+                  _destination!.id, 
                   DateTime.now(),
                   affinityGroupId: _communityOnly ? primaryGroup : null,
                 );
@@ -94,8 +116,8 @@ class _RideSearchCardState extends State<RideSearchCard> {
                   MaterialPageRoute(
                     builder: (_) => RideResultsScreen(
                       rides: rides,
-                      originName: 'Adenta Barrier',
-                      destinationName: 'Ridge',
+                      originName: _pickup!.name,
+                      destinationName: _destination!.name,
                     ),
                   ),
                 );
@@ -124,27 +146,38 @@ class _RideSearchCardState extends State<RideSearchCard> {
     required String label,
     required String value,
     Color iconColor = AppTheme.primaryNavy,
+    VoidCallback? onTap,
   }) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 15, 
+                      fontWeight: FontWeight.w500,
+                      color: onTap != null ? Colors.black87 : Colors.grey,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
