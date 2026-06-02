@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:smile_id/smile_id.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -17,18 +18,22 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
 
-  if (Platform.isWindows || Platform.isLinux) {
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
   // Initialize Smile ID
-  SmileID.initialize(
-    useSandbox: true, 
-    enableCrashReporting: true,
-  );
+  if (!kIsWeb) {
+    SmileID.initialize(
+      useSandbox: true, 
+      enableCrashReporting: true,
+    );
+  }
   
   runApp(
     MultiProvider(

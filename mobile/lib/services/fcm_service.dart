@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import './api_service.dart';
 
 @pragma('vm:entry-point')
@@ -17,6 +18,7 @@ class FCMService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   Future<void> init(BuildContext? context) async {
+    if (kIsWeb) return;
     // 1. Request permissions (especially for iOS)
     NotificationSettings settings = await _messaging.requestPermission(
       alert: true,

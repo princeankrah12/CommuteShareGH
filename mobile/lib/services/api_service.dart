@@ -61,6 +61,27 @@ class ApiService {
     }
   }
 
+  static Future<String?> getToken() async {
+    return await _storage.read(key: 'auth_token');
+  }
+
+  static Future<User> getCurrentUser() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: await _headers(),
+      );
+      if (response.statusCode == 200) {
+        return User.fromJson(jsonDecode(response.body)['user']);
+      } else {
+        throw Exception('Failed to load current user');
+      }
+    } catch (e) {
+      debugPrint('GetCurrentUser failed: $e');
+      rethrow;
+    }
+  }
+
   static Future<User> getProfile(String userId) async {
     try {
       final response = await http.get(
@@ -239,11 +260,11 @@ class ApiService {
     }
   }
 
-  static Future<void> verifyWorkEmail(String email, String otp) async {
+  static Future<void> verifyWorkEmail(String email) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/verify-work'),
       headers: await _headers(),
-      body: jsonEncode({'workEmail': email, 'otp': otp}),
+      body: jsonEncode({'workEmail': email}),
     );
 
     if (response.statusCode != 200) {

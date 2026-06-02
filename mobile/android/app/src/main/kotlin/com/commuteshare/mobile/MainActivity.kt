@@ -1,5 +1,14 @@
 package com.commuteshare.mobile
 
-import io.flutter.embedding.android.FlutterActivity
+import android.os.Bundle
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity : FlutterFragmentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.decorView.setViewTreeLifecycleOwner(this)
+        window.decorView.setViewTreeSavedStateRegistryOwner(this)
+    }
+}

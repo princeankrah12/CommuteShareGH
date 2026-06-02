@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/user_provider.dart';
+import './home_screen.dart';
 
 class AffinityVerificationScreen extends StatefulWidget {
-  const AffinityVerificationScreen({super.key});
+  final bool isOnboarding;
+  const AffinityVerificationScreen({super.key, this.isOnboarding = false});
 
   @override
   State<AffinityVerificationScreen> createState() => _AffinityVerificationScreenState();
@@ -12,13 +14,11 @@ class AffinityVerificationScreen extends StatefulWidget {
 
 class _AffinityVerificationScreenState extends State<AffinityVerificationScreen> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
   
   bool _isSubmitting = false;
-  bool _otpSent = false;
   String? _errorMessage;
 
-  void _handleSendLink() async {
+  void _handleVerifyWorkEmail() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) return;
 
@@ -27,41 +27,12 @@ class _AffinityVerificationScreenState extends State<AffinityVerificationScreen>
       _errorMessage = null;
     });
 
-    try {
-      final userProvider = context.read<UserProvider>();
-      await userProvider.requestWorkVerification(email);
-      
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _otpSent = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification code sent to your work email.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  void _handleVerifyOTP() async {
-    if (_otpController.text.trim().length < 4) return;
-
-    setState(() => _isSubmitting = true);
-    
     final userProvider = context.read<UserProvider>();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
-      // Use the actual API to link the email
-      await userProvider.verifyWorkEmail(_emailController.text.trim(), _otpController.text.trim());
+      await userProvider.verifyWorkEmail(email);
       
       if (mounted) {
         scaffoldMessenger.showSnackBar(
@@ -71,7 +42,13 @@ class _AffinityVerificationScreenState extends State<AffinityVerificationScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
-        navigator.pop();
+        if (widget.isOnboarding) {
+          navigator.pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        } else {
+          navigator.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -107,57 +84,41 @@ class _AffinityVerificationScreenState extends State<AffinityVerificationScreen>
             ),
             const SizedBox(height: 32),
             
-            if (!_otpSent) ...[
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Corporate Email Address',
-                  hintText: 'kojo.mensah@mtn.com.gh',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  errorText: _errorMessage,
-                ),
-                enabled: !_isSubmitting,
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Corporate Email Address',
+                hintText: 'kojo.mensah@mtn.com.gh',
+                prefixIcon: const Icon(Icons.email_outlined),
+                errorText: _errorMessage,
               ),
-              const SizedBox(height: 24),
-              const Text('How it works:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildStep('1. Enter your work email.'),
-              _buildStep('2. Receive a 6-digit verification code.'),
-              _buildStep('3. Enter code to earn your badge.'),
-            ] else ...[
-              const Text(
-                'Enter Verification Code',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 8),
-              Text('We sent a code to ${_emailController.text}', style: const TextStyle(color: Colors.grey)),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 12, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '000000',
-                  errorText: _errorMessage,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                enabled: !_isSubmitting,
-              ),
-              TextButton(
-                onPressed: _isSubmitting ? null : () => setState(() => _otpSent = false),
-                child: const Text('Change Email'),
-              ),
-            ],
+              enabled: !_isSubmitting,
+            ),
+            const SizedBox(height: 24),
+            const Text('How it works:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _buildStep('1. Enter your work email.'),
+            _buildStep('2. Verify instantly to earn your badge.'),
             
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: _isSubmitting ? null : (_otpSent ? _handleVerifyOTP : _handleSendLink),
+              onPressed: _isSubmitting ? null : _handleVerifyWorkEmail,
               child: _isSubmitting 
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(_otpSent ? 'Verify Code' : 'Send Verification Code'),
+                : const Text('Verify Work Email'),
             ),
+            if (widget.isOnboarding) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  );
+                },
+                child: const Text('Skip for now'),
+              ),
+            ]
           ],
         ),
       ),

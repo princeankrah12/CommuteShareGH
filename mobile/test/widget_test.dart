@@ -1,30 +1,54 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:mobile/main.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile/providers/user_provider.dart';
+import 'package:mobile/screens/onboarding_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyCommuteShareApp());
+  testWidgets('Onboarding and Login screen navigation test', (WidgetTester tester) async {
+    // Set mock initial values for SharedPreferences
+    SharedPreferences.setMockInitialValues({});
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final userProvider = UserProvider();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Pump OnboardingScreen with UserProvider
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<UserProvider>.value(value: userProvider),
+        ],
+        child: const MaterialApp(
+          home: OnboardingScreen(),
+        ),
+      ),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify OnboardingScreen first page content
+    expect(find.text('Commute with Community'), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
+
+    // Tap "Next" button
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Verify second page content
+    expect(find.text('Verified & Trusted'), findsOneWidget);
+
+    // Tap "Next" again
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Verify third page content
+    expect(find.text('Flexible Payments'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
+
+    // Tap "Get Started" to navigate to LoginScreen
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    // Verify we are now on the LoginScreen
+    expect(find.text('MyCommuteShare'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsOneWidget);
   });
 }

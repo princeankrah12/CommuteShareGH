@@ -14,5 +14,5 @@ class AppConfig {
   static bool get isProduction => kReleaseMode;
 
   // Set to true to use simulation/mock services for identity/kyc
-  static bool get useMockIdentity => false;
+  static bool get useMockIdentity => kDebugMode;
 }

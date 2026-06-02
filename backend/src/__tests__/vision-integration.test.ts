@@ -12,7 +12,7 @@ import { TransactionStatus, RideStatus, PodRole } from '@prisma/client';
 
 describe('Vision Integration: Trust, Finance, and Communities', () => {
   let io: Server, serverSocket: any, clientSocket: any;
-  const port = 4000;
+  const port = 4005;
 
   beforeEach(async () => {
     // Setup Socket.io for Real-time testing

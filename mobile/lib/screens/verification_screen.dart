@@ -7,9 +7,12 @@ import 'dart:io';
 import '../app_config.dart';
 import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
+import './affinity_verification_screen.dart';
+import './home_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
-  const VerificationScreen({super.key});
+  final bool isOnboarding;
+  const VerificationScreen({super.key, this.isOnboarding = false});
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
@@ -64,7 +67,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        navigator.pop();
+        if (widget.isOnboarding) {
+          final user = userProvider.user;
+          if (user != null && user.workEmail == null && user.affinityGroups.isEmpty) {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const AffinityVerificationScreen(isOnboarding: true)),
+            );
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+        } else {
+          navigator.pop();
+        }
       }
     } catch (e) {
       if (mounted) {

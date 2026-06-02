@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { beforeAll, beforeEach, afterAll } from 'vitest';
 import prisma from '../services/prisma';
+import redis from '../utils/redis';
 
 beforeAll(async () => {
   // Ensure we are connected and PostGIS is enabled
@@ -32,8 +33,22 @@ beforeEach(async () => {
   } catch (error) {
     console.error('Error clearing database:', error);
   }
+
+  // Clear Redis state
+  try {
+    if (redis.status === 'ready') {
+      await redis.flushdb();
+    }
+  } catch (e) {
+    console.error('Error flushing Redis:', e);
+  }
 });
 
 afterAll(async () => {
   await prisma.$disconnect();
+  try {
+    await redis.quit();
+  } catch (e) {
+    console.error('Error disconnecting Redis:', e);
+  }
 });

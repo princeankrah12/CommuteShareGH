@@ -21,7 +21,14 @@ class UserProvider with ChangeNotifier {
   List<Landmark> get recentLandmarks => _recentLandmarks;
 
   UserProvider() {
+    _initSettings();
     _loadRecentLandmarks();
+  }
+
+  Future<void> _initSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    notifyListeners();
   }
 
   Future<void> _loadRecentLandmarks() async {
@@ -54,9 +61,10 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void completeOnboarding() {
+  Future<void> completeOnboarding() async {
     _hasSeenOnboarding = true;
-    // In a real app, persist this with SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
     notifyListeners();
   }
 
@@ -80,7 +88,28 @@ class UserProvider with ChangeNotifier {
 
 
 
-  void logout() {
+  Future<void> tryRestoreSession() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final storedToken = await ApiService.getToken();
+      if (storedToken != null) {
+        _user = await ApiService.getCurrentUser();
+        _token = storedToken;
+        await _db.cacheUser(_user!);
+      }
+    } catch (e) {
+      debugPrint('Session restore failed: $e');
+      _user = null;
+      _token = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> logout() async {
+    await ApiService.logout();
     _user = null;
     _token = null;
     notifyListeners();
@@ -169,10 +198,10 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<void> verifyWorkEmail(String email, String otp) async {
+  Future<void> verifyWorkEmail(String email) async {
     if (_user == null) return;
     try {
-      await ApiService.verifyWorkEmail(email, otp);
+      await ApiService.verifyWorkEmail(email);
       await fetchProfile(_user!.id);
     } catch (e) {
       debugPrint(e.toString());

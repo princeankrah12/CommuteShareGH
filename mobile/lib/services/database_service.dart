@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/app_models.dart';
 
 class DatabaseService {
@@ -42,6 +43,7 @@ class DatabaseService {
 
   // Cache User Profile
   Future<void> cacheUser(User user) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.insert(
       'user_cache',
@@ -62,6 +64,7 @@ class DatabaseService {
 
   // Get Cached User
   Future<User?> getCachedUser(String userId) async {
+    if (kIsWeb) return null;
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'user_cache',
@@ -75,6 +78,7 @@ class DatabaseService {
 
   // Cache Ride Search Results
   Future<void> cacheRides(String originId, String destId, List<Ride> rides) async {
+    if (kIsWeb) return;
     final db = await database;
     final String corridorKey = '${originId}_$destId';
     
@@ -111,6 +115,7 @@ class DatabaseService {
 
   // Get Cached Rides
   Future<List<Ride>> getCachedRides(String originId, String destId) async {
+    if (kIsWeb) return [];
     final db = await database;
     final String corridorKey = '${originId}_$destId';
     

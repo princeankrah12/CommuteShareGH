@@ -156,7 +156,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          initialValue: _selectedLandmarks[index],
+                          value: _selectedLandmarks[index],
                           items: _landmarks.map((l) => DropdownMenuItem(value: l['id'], child: Text(l['name']!))).toList(),
                           onChanged: _isSubmitting ? null : (v) => setState(() => _selectedLandmarks[index] = v),
                           hint: Text(index == 0 ? 'Origin' : (index == _selectedLandmarks.length - 1 ? 'Destination' : 'Intermediate Stop')),

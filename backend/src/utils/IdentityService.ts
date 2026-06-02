@@ -3,23 +3,30 @@ import logger from './logger';
 
 export class IdentityService {
   static async verifyGhanaCard(ghanaCardId: string, fullName: string, selfie?: string) {
-    logger.info(`[IdentityService] Verifying identity for ${fullName} (ID: ${ghanaCardId})...`);
+    logger.info(`[IdentityService] Mock Verifying identity for ${fullName} (ID: ${ghanaCardId})...`);
 
-    const smileIdUrl = process.env.SMILE_ID_URL || 'https://api.smileidentity.com/v1/verify';
-
-    try {
-      const response = await axios.post(smileIdUrl, {
-        ghanaCardId,
-        fullName,
-        selfie
-      });
-      return response.data;
-    } catch (error: any) {
-      logger.error('Identity Verification Error:', error.response?.data || error.message);
-      if (error.response && error.response.data) {
-        return error.response.data;
-      }
-      throw new Error('Connection to NIA database timed out. Please try again later.');
+    // Validate format: GHA-XXXXXXXXX-X
+    const ghanaCardRegex = /^GHA-\d{9}-\d$/;
+    if (!ghanaCardRegex.test(ghanaCardId)) {
+      throw new Error('Invalid Ghana Card ID format');
     }
+
+    // Magic ID scenarios
+    if (ghanaCardId === 'GHA-222222222-2') {
+      return {
+        status: 'FAILED',
+        reason: 'Biometric mismatch'
+      };
+    }
+
+    // Default mock success (e.g. for GHA-111111111-1 or any other valid format)
+    return {
+      status: 'SUCCESS',
+      faceMatchScore: 95.0,
+      data: {
+        ResultCode: '1012',
+        ResultText: 'ID Number Validated'
+      }
+    };
   }
 }

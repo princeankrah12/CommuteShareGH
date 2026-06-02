@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import './onboarding_screen.dart';
 import './login_screen.dart';
 import './home_screen.dart';
+import './verification_screen.dart';
+import './affinity_verification_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 
@@ -27,6 +29,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.tryRestoreSession();
+    
     debugPrint('SplashScreen: hasSeenOnboarding=${userProvider.hasSeenOnboarding}');
     
     if (!userProvider.hasSeenOnboarding) {
@@ -35,10 +39,22 @@ class _SplashScreenState extends State<SplashScreen> {
         MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
     } else if (userProvider.isAuthenticated) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      if (!userProvider.user!.isVerified) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const VerificationScreen(isOnboarding: true)),
+        );
+      } else if (userProvider.user!.workEmail == null && userProvider.user!.affinityGroups.isEmpty) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AffinityVerificationScreen(isOnboarding: true)),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
     } else {
       Navigator.pushReplacement(
         context,

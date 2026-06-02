@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 16),
         ],
       ),
-      floatingActionButton: !isDrivingToday
+      floatingActionButton: (!isDrivingToday && hasApprovedVehicle && user.isVerified)
           ? FloatingActionButton.extended(
               onPressed: () => Navigator.push(
                 context,

@@ -13,7 +13,8 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
-  int _balance = 0;
+  double _walletBalance = 0.0;
+  int _commutePoints = 0;
   int _strikes = 0;
   List<dynamic> _transactions = [];
 
@@ -49,7 +50,8 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       
       if (mounted) {
         setState(() {
-          _balance = data['commutePoints'] ?? 0;
+          _walletBalance = userProvider.user?.walletBalance ?? 0.0;
+          _commutePoints = data['commutePoints'] ?? 0;
           _strikes = data['strikes'] ?? 0;
           _transactions = txs;
           _isLoading = false;
@@ -212,7 +214,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
   }
 
   Widget _buildBalanceCard() {
-    final bool isNegative = _balance < 0;
+    final bool isNegative = _walletBalance < 0;
     final Color cardColor = isNegative ? const Color(0xFFB71C1C) : const Color(0xFF1A237E);
 
     return Container(
@@ -233,7 +235,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isNegative ? 'Commute Debt' : 'Available Points',
+            isNegative ? 'Commute Debt' : 'Available Balance',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: 16,
@@ -242,11 +244,19 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
           ),
           const SizedBox(height: 8),
           Text(
-            '$_balance CP',
+            'GHS ${_walletBalance.toStringAsFixed(2)}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 40,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$_commutePoints Commute Points (CP)',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
             ),
           ),
           if (isNegative) ...[
@@ -351,7 +361,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
             ),
             subtitle: Text(dateStr),
             trailing: Text(
-              '${isPositive ? "+" : ""}${tx.amount.toInt()} CP',
+              '${isPositive ? "+" : ""}GHS ${tx.amount.toInt()}',
               style: TextStyle(
                 color: isPositive ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,

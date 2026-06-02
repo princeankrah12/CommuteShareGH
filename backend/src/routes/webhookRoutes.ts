@@ -6,7 +6,15 @@ import express from 'express';
 const router = Router();
 
 // Paystack and MoMo webhooks
-router.post('/payments', express.json(), WebhookController.handlePaymentWebhook);
+router.post(
+  '/payments',
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+  WebhookController.handlePaymentWebhook
+);
 
 // Smile Identity Webhook (Callbacks)
 router.post('/smile', express.json(), SmileWebhookController.handleCallback);

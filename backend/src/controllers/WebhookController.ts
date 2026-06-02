@@ -30,9 +30,10 @@ export class WebhookController {
    */
   private static async handlePaystack(req: Request, res: Response, signature: string) {
     const secret = process.env.PAYSTACK_SECRET_KEY || '';
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
     const hash = crypto
       .createHmac('sha512', secret)
-      .update(JSON.stringify(req.body))
+      .update(rawBody)
       .digest('hex');
 
     const isMock = process.env.USE_MOCK_DATA === 'true' && signature === 'MOCK_SIGNATURE';

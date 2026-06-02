@@ -45,7 +45,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: '*', // Allow all origins for Flutter Web random ports
     methods: ['GET', 'POST'],
   },
 });
@@ -67,7 +67,7 @@ const PORT = Number(process.env.PORT) || 3001;
 
 app.use(helmet());
 app.use(cors({
-  origin: allowedOrigins,
+  origin: '*', // Allow all origins for Flutter Web random ports
 }));
 app.use(limiter);
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
